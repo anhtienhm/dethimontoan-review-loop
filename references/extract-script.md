@@ -33,7 +33,10 @@ for l in lines:
             txt = l.split('AXStaticText = ', 1)[1].rsplit('" [actions', 1)[0].lstrip('"')
             
             # Stop khi gap dong khong lien quan (marker co dau — khop text that tren UI)
-            if 'Bạn là Tổ trưởng' in txt or 'Thẩm định đề thi' in txt:
+            # 'Gemini là một AI' = disclaimer cuoi ket qua — DIEM DUNG CHUAN (khop SKILL.md Buoc 3),
+            # khong cho lot vao bien ban; con thieu marker nay thi khi dump khong co ban trung
+            # script se quet het ca footer
+            if 'Gemini là một AI' in txt or 'Bạn là Tổ trưởng' in txt or 'Thẩm định đề thi' in txt:
                 break
             
             out.append(txt)
