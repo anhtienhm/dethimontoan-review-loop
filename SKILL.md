@@ -67,10 +67,10 @@ Dùng kết quả của `get_window_state(max_elements=2000, query="BIÊN BẢN|
 **PHƯƠNG PHÁP 1 — Claude Code Web Remote (ƯU TIÊN)**:
 1. Trích xuất biên bản → `/tmp/bienban_XXXX.txt` (NGUYÊN VĂN)
 2. Copy vào repo: `cp /tmp/bienban_XXXX.txt /tmp/dethimontoan.net/raw_bienban_XXXX.txt`
-3. Commit lên GitHub: `git add && git commit -m "raw bien ban XXXX" && git push`
+3. Commit lên GitHub: `git add raw_bienban_XXXX.txt && git commit -m "raw bien ban XXXX" && git pull --rebase origin main && git push origin main`
 4. Mở `https://claude.ai/code` trong Chrome
 5. Click session "dethimontoan.net" trong sidebar
-6. `type_text(instruction, FG)` vào Prompt → `press_key(return)` — KHÔNG FG
+6. `type_text(instruction, FG)` vào Prompt → `press_key(return)` — KHÔNG FG (nếu sidebar không chuyển Running → xem Pitfall "Claude Code không chạy")
 7. Sidebar hiện "Running dethimontoan.net"
 8. **Tự động poll 15s** kiểm tra sidebar còn Running không:
    - `get_window_state` query "Running dethimontoan" — nếu không còn → done
@@ -88,14 +88,14 @@ Giữ NGUYÊN các fix cũ (r1, r2...). Bump option nếu cần. Commit push.
 export PATH="$HOME/.local/bin:$PATH"
 cd /tmp/dethimontoan.net
 claude auth status --text || claude auth login
-claude -p '...' --allowedTools "Read,Write,Edit,Execute" --max-turns 40
+claude -p '...' --allowedTools "Read,Write,Edit,Bash" --max-turns 40
 ```
-⚠️ CLI timeout 300s (mặc định). Cần `pty=true` trong terminal() vì Claude CLI cần PTY. Dùng `--allowedTools "Read,Write,Edit,Execute"` (không "WebFetch" — WebFetch hay bị lỗi permission). Nếu session chặn git write, tự tay `git add/commit/push` sau.
+⚠️ CLI timeout 300s (mặc định). Cần `pty=true` trong terminal() vì Claude CLI cần PTY. Dùng `--allowedTools "Read,Write,Edit,Bash"` (tool chạy lệnh tên là "Bash", không phải "Execute"; không thêm "WebFetch" — WebFetch hay bị lỗi permission). Nếu session chặn git write, tự tay `git add/commit/push` sau.
 
 **⚠️ Quản lý tab khi dùng Web Remote**:
 - Tab claude.ai/code KHÔNG navigate đi nơi khác
 - Khi cần navigate exam URL: dùng TAB KHÁC hoặc Cmd+L
-- page() navigate TAB HIỆN TẠY → chỉ dùng khi tab đang ở exam
+- page() navigate TAB HIỆN TẠI → chỉ dùng khi tab đang ở exam
 
 **Commit & push**:
 ```bash
@@ -110,12 +110,14 @@ git pull --rebase origin main && git push origin main
 
 ### Bước 4.2 - Tự động theo dõi Claude Code (poll 15s)
 ```python
-from hermes_tools import [terminal, mcp__cua_driver__get_window_state]
+from hermes_tools import terminal, mcp__cua_driver__get_window_state as get_window_state
 import time
-for i in range(40):  # Tối đa 10 phút
+
+for _ in range(40):  # Tối đa 10 phút (40 lần x 15s)
     time.sleep(15)
     r = get_window_state(pid=..., window_id=..., max_elements=100, query="Running dethimontoan")
     if 'Running' not in r['result']: break  # Done
+
 # Kiểm tra commit mới
 terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 ```
@@ -177,7 +179,7 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 - Triệu chứng: "Câu 4 (7x=0)" vẫn xuất hiện → patch chưa chạy
 
 ### Gửi biên bản cho Claude Code — YÊU CẦU CỨNG
-- **GUYỀN TẮC**: Gửi cho Claude Code PHẢI là **nội dung ĐẦY ĐỦ và CHÍNH XÁC 100%** của biên bản thẩm định Gemini. **TUYỆT ĐỐI KHÔNG rút gọn, tóm tắt, hay diễn giải lại biên bản.**
+- **NGUYÊN TẮC**: Gửi cho Claude Code PHẢI là **nội dung ĐẦY ĐỦ và CHÍNH XÁC 100%** của biên bản thẩm định Gemini. **TUYỆT ĐỐI KHÔNG rút gọn, tóm tắt, hay diễn giải lại biên bản.**
 - Claude Code PHẢI fix **chính xác theo đề xuất trong biên bản**, **KHÔNG được lệch hướng fix lòng vòng** hay tự ý thay đổi yêu cầu.
 - Nếu Claude Code tạo patch KHÁC đề xuất Gemini → **dừng ngay**, đọc raw_bienban, gửi lệnh update chính xác theo biên bản.
 - Bug thường gặp: Claude Code chỉ apply `e` (barem), quên `q`+`ans` cho sa → bump gate option để chạy lại.
@@ -203,7 +205,7 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 - `bring_to_front` để focus window
 
 ## Luật bất biến
-- **GUỬI NGUYÊN VĂN, KHÔNG RÚT GỌN DÙ 1 TỪ**
+- **GỬI NGUYÊN VĂN, KHÔNG RÚT GỌN DÙ 1 TỪ**
 - **KHÔNG hỏi user** — tự retry/reset, KHÔNG hỏi "có muốn tiếp tục không"
 - **Reload tab trước mỗi lần chạy Gemini**
 - **Luôn get fresh state trước click**
