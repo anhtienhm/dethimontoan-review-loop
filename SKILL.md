@@ -44,7 +44,7 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
 
    Thứ tự thao tác (mỗi cách CHỈ TOGGLE 1 LẦN rồi verify ngay, fail mới sang cách kế):
    - Cách 0 — KIỂM TRA ĐÃ MỞ CHƯA: `get_window_state` query "Đang chia sẻ|Gemini Chrome" → thấy = panel ĐANG mở, DỪNG (toggle nữa = tắt)
-   - Cách 1 (nút đã ghim TOOLBAR — ưu tiên nhất): `get_window_state` fresh query "Hỏi Gemini" → thấy `AXButton` → click theo ELEMENT (không pixel) → verify; không thấy element → click anchor `(X_avatar − 105, Y_avatar)` từ element avatar → screenshot verify
+   - Cách 1 (nút đã ghim TOOLBAR — ưu tiên nhất, ĐÃ KIỂM CHỨNG chạy thật 21/7): `get_window_state` fresh query "Hỏi Gemini" → thấy `AXButton` → click theo ELEMENT (không pixel) → verify; không thấy element → click anchor `(X_avatar − 105, Y_avatar)` từ element avatar → screenshot verify
    - Cách 1b (không cần toạ độ/AX): `bring_to_front` Chrome → `hotkey(["cmd","shift","y"], FG)` → đợi ~2s → verify
    - Cách 2: lấy AX tree mức APP/menu bar (get_window_state theo window KHÔNG thấy) → `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` → AXPress 1 lần → verify
    - Cách 2b — System Events qua `terminal()` (ĐƯỜNG TIÊM KHÁC driver — dùng khi mọi click/hotkey của driver câm; cần quyền Accessibility, thường đã có):
@@ -70,11 +70,19 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
    - `get_window_state(max_elements=5000)` → tìm `AXButton "Bắt đầu cuộc trò chuyện mới"`
    - Click nó (AXPress).
 
-3. **Gọi skill** — đọc placeholder ô input để chọn ĐÚNG MỘT luồng (KHÔNG trộn `/` với `@`):
-   - `press_key("f6", FG)` focus input
-   - Placeholder "Nhập nội dung / để sử dụng kỹ năng" → **luồng `/`**: `type_text("/", FG)` (verified:true = vào đúng ô) → `get_window_state` tìm `AXMenuItem "Thẩm định đề thi - dethimontoan.net"` → click
-   - Placeholder "Nhập @ để hỏi về một thẻ" (bản Gemini mới) → **luồng `@`**: `type_text("@Thẩm định đề thi - dethimontoan.net", FG)` → get fresh state, menu mention hiện mục skill → click (menu không click được mới `press_key("return")` chọn mục đang highlight)
-   - Verify skill đã thành CHIP vàng trong ô input RỒI MỚI Click `AXButton "Gửi"` — gõ nguyên tên skill + Enter khi chưa có chip = gửi tin nhắn thường, skill KHÔNG kích hoạt
+3. **Gọi skill "Thẩm định đề thi - dethimontoan.net"** — đọc placeholder ô nhập để chọn ĐÚNG MỘT luồng (KHÔNG trộn `/` với `@`). LUẬT CỨNG: **KHÔNG nhấn Enter khi ô nhập CHƯA có chip skill** — Enter lúc đó = gửi tin nhắn thường, skill KHÔNG kích hoạt:
+   1. Focus ô nhập: `press_key("f6", FG)` → gõ `type_text("/", FG)`:
+      - `verified:true` + menu bật = đã vào đúng ô → sang bước 2
+      - `verified:false` HOẶC menu không hiện = ĐANG SAI CHỖ (nguy cơ gõ vào address bar → Chrome navigate URL lạ — đã vấp): get fresh state → CLICK thẳng vào Ô NHẬP của panel (AXTextArea/AXTextField ngay dưới dòng "Đang chia sẻ") → xoá ký tự thừa nếu có → gõ lại `/`
+   2. **Luồng `/`** (placeholder "Nhập nội dung / để sử dụng kỹ năng"):
+      - Gõ `/` xong đợi ~1s cho menu "Kỹ năng của bạn" hiện
+      - `get_window_state` FRESH → tìm `AXMenuItem "Thẩm định đề thi - dethimontoan.net"` → CLICK theo element
+      - Click không ăn → lấy frame của item từ AX tree → pixel click vào TÂM frame
+      - Cần lọc menu thì gõ thêm "Thẩm" — nhưng TUYỆT ĐỐI không Enter
+      - Menu KHÔNG có mục skill → tài khoản sai/chưa đăng nhập Google (skill gắn theo tài khoản) → DỪNG báo user, KHÔNG gõ tên skill bằng tay rồi gửi
+   3. **Luồng `@`** (placeholder "Nhập @ để hỏi về một thẻ"): `type_text("@Thẩm định đề thi - dethimontoan.net", FG)` → get fresh state → menu mention hiện mục skill → click (click không được mới `press_key("return")` chọn mục đang highlight)
+   4. **VERIFY CHIP**: get fresh state + chụp screenshot — ô nhập phải hiện CHIP VÀNG "Thẩm định đề thi - dethimontoan.net". Chưa có chip → quay lại bước 1, KHÔNG bấm Gửi
+   5. Có chip → get fresh state → click `AXButton "Gửi"` → chụp screenshot xác nhận tin ĐÃ GỬI (luật verify bằng ảnh — đừng tin verified:true suông)
    - **LUÔN get fresh state trước mỗi click** — element index thay đổi mỗi snapshot
 
 4. **Chờ kết quả — Poll 15s** (không sleep 120):
