@@ -1,6 +1,6 @@
 ---
 name: dethimontoan-review-loop
-description: 'Vòng lặp thẩm định đề thi dethimontoan.net: Gemini → trích xuất biên bản → Claude Code (Web Remote/CLI) tạo PHP patch → push GitHub → deploy → reload Chrome → Gemini lại → đến khi ĐẠT → chuyển đề kế tiếp.'
+description: 'Vòng lặp thẩm định đề thi dethimontoan.net: Gemini → trích xuất biên bản → Claude Code (Web Remote/CLI) tạo PHP patch → push GitHub → reload → Gemini lại → đến khi ĐẠT → chuyển đề kế tiếp.'
 ---
 
 # Vòng lặp thẩm định đề thi dethimontoan.net
@@ -52,6 +52,14 @@ Chrome → Gemini skill → trích xuất biên bản → commit raw lên GitHub
 4. **Chờ kết quả — Poll 15s** (không sleep 120):
    - `get_window_state` mỗi 15s, tìm "BIÊN BẢN THẨM ĐỊNH" + "Gemini là một AI" trong result
    - Tối đa 20 lần (5 phút). Nếu quá → reload tab + chạy lại.
+   ```python
+   from hermes_tools import terminal
+   import time
+   for i in range(20):
+       time.sleep(15)
+       r = terminal("grep -c 'BIÊN BẢN THẨM ĐỊNH.*1182' /tmp/result.txt")
+       if 'done': break
+   ```
 
 ### Bước 3 - Trích xuất biên bản (NGUYÊN VĂN)
 
@@ -67,17 +75,17 @@ Dùng kết quả của `get_window_state(max_elements=2000, query="BIÊN BẢN|
 **PHƯƠNG PHÁP 1 — Claude Code Web Remote (ƯU TIÊN)**:
 1. Trích xuất biên bản → `/tmp/bienban_XXXX.txt` (NGUYÊN VĂN)
 2. Copy vào repo: `cp /tmp/bienban_XXXX.txt /tmp/dethimontoan.net/raw_bienban_XXXX.txt`
-3. Commit lên GitHub: `git add raw_bienban_XXXX.txt && git commit -m "raw bien ban XXXX" && git pull --rebase origin main && git push origin main`
+3. Commit lên GitHub: `git add && git commit -m "raw bien ban XXXX" && git push`
 4. Mở `https://claude.ai/code` trong Chrome
 5. Click session "dethimontoan.net" trong sidebar
-6. `type_text(instruction, FG)` vào Prompt → `press_key(return)` — KHÔNG FG (nếu sidebar không chuyển Running → xem Pitfall "Claude Code không chạy")
+6. `type_text(instruction, FG)` vào Prompt → `press_key(return)` — KHÔNG FG
 7. Sidebar hiện "Running dethimontoan.net"
 8. **Tự động poll 15s** kiểm tra sidebar còn Running không:
    - `get_window_state` query "Running dethimontoan" — nếu không còn → done
 9. Kiểm tra commit mới trên GitHub sau khi done
 
 **Yêu cầu mẫu cho Claude Code Web**:
-```text
+```
 Đọc raw_bienban_XXXX.txt (biên bản Gemini) và inc/patch_XXXX.php (patch hiện tại).
 Cập nhật patch_XXXX.php để khớp chính xác đề xuất Gemini.
 Giữ NGUYÊN các fix cũ (r1, r2...). Bump option nếu cần. Commit push.
@@ -88,9 +96,9 @@ Giữ NGUYÊN các fix cũ (r1, r2...). Bump option nếu cần. Commit push.
 export PATH="$HOME/.local/bin:$PATH"
 cd /tmp/dethimontoan.net
 claude auth status --text || claude auth login
-claude -p '...' --allowedTools "Read,Write,Edit,Bash" --max-turns 40
+claude -p '...' --allowedTools "Read,Write,Edit,Execute" --max-turns 40
 ```
-⚠️ CLI timeout 300s (mặc định). Cần `pty=true` trong terminal() vì Claude CLI cần PTY. Dùng `--allowedTools "Read,Write,Edit,Bash"` (tool chạy lệnh tên là "Bash", không phải "Execute"; không thêm "WebFetch" — WebFetch hay bị lỗi permission). Nếu session chặn git write, tự tay `git add/commit/push` sau.
+⚠️ CLI timeout 300s (mặc định). Cần `pty=true` trong terminal() vì Claude CLI cần PTY. Dùng `--allowedTools "Read,Write,Edit,Execute"` (không "WebFetch" — WebFetch hay bị lỗi permission). Nếu session chặn git write, tự tay `git add/commit/push` sau.
 
 **⚠️ Quản lý tab khi dùng Web Remote**:
 - Tab claude.ai/code KHÔNG navigate đi nơi khác
@@ -106,18 +114,16 @@ git commit -m "patch_XXXX rN: fix ..."
 git pull --rebase origin main && git push origin main
 ```
 - **KHÔNG dùng sed để xóa conflict markers** — gây lỗi PHP parse error
-- Cách resolve đúng: đọc file → giữ 1 phiên bản duy nhất
+- Cách resolve đúng: đọc file → giữ 1 phiên bản (HEAD hoặc THEIR)
 
 ### Bước 4.2 - Tự động theo dõi Claude Code (poll 15s)
 ```python
-from hermes_tools import terminal, mcp__cua_driver__get_window_state as get_window_state
+from hermes_tools import [terminal, mcp__cua_driver__get_window_state]
 import time
-
-for _ in range(40):  # Tối đa 10 phút (40 lần x 15s)
+for i in range(40):  # Tối đa 10 phút
     time.sleep(15)
     r = get_window_state(pid=..., window_id=..., max_elements=100, query="Running dethimontoan")
     if 'Running' not in r['result']: break  # Done
-
 # Kiểm tra commit mới
 terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 ```
@@ -170,7 +176,7 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 ### Merge conflict khi push
 - Remote có changes → `git pull --rebase origin main`
 - CẤM dùng sed xóa conflict markers → "Parse error: unexpected token '*'" / "Unclosed '{'"
-- Cách resolve đúng: đọc file, giữ 1 phiên bản duy nhất
+- Cách resolve: đọc file, giữ 1 phiên bản duy nhất
 
 ### Deploy patch cần thiết — GitHub push ≠ live
 - GitHub push xong, patch CHƯA có hiệu lực trên WordPress
@@ -179,10 +185,10 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 - Triệu chứng: "Câu 4 (7x=0)" vẫn xuất hiện → patch chưa chạy
 
 ### Gửi biên bản cho Claude Code — YÊU CẦU CỨNG
-- **NGUYÊN TẮC**: Gửi cho Claude Code PHẢI là **nội dung ĐẦY ĐỦ và CHÍNH XÁC 100%** của biên bản thẩm định Gemini. **TUYỆT ĐỐI KHÔNG rút gọn, tóm tắt, hay diễn giải lại biên bản.**
+- **GUYỀN TẮC**: Gửi cho Claude Code PHẢI là **nội dung ĐẦY ĐỦ và CHÍNH XÁC 100%** của biên bản thẩm định Gemini. **TUYỆT ĐỐI KHÔNG rút gọn, tóm tắt, hay diễn giải lại biên bản.**
 - Claude Code PHẢI fix **chính xác theo đề xuất trong biên bản**, **KHÔNG được lệch hướng fix lòng vòng** hay tự ý thay đổi yêu cầu.
 - Nếu Claude Code tạo patch KHÁC đề xuất Gemini → **dừng ngay**, đọc raw_bienban, gửi lệnh update chính xác theo biên bản.
-- Bug thường gặp: Claude Code chỉ apply `e` (barem), quên `q`+`ans` cho sa → bump gate option để chạy lại.
+- Bug thường gặp: Claude Code chỉ apply `e` (barem), quên `q`+`ans` cho sa — bump gate option để chạy lại.
 - **Fallback bắt buộc**: Nếu Claude Code Web Remote/CLI treo/timeout → **dừng retry vô hạn**, tự tạo `inc/patch_XXXX_rN.php` dựa trên `raw_bienban_XXXX.txt`, commit + push ngay.
 - Tạo fallback patch theo nguyên tắc: đúng đối tượng, đúng field `q/o/c/ans/e`, guard theo nội dung mới để idempotent, không động phần đã đạt.
 
@@ -205,7 +211,7 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 - `bring_to_front` để focus window
 
 ## Luật bất biến
-- **GỬI NGUYÊN VĂN, KHÔNG RÚT GỌN DÙ 1 TỪ**
+- **GUỬI NGUYÊN VĂN, KHÔNG RÚT GỌN DÙ 1 TỪ**
 - **KHÔNG hỏi user** — tự retry/reset, KHÔNG hỏi "có muốn tiếp tục không"
 - **Reload tab trước mỗi lần chạy Gemini**
 - **Luôn get fresh state trước click**
