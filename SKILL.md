@@ -40,10 +40,12 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
    - Chip ✦ "Hỏi Gemini" KHÔNG xuất hiện trong AX tree khi panel chưa mở (không thấy element ≠ không có extension) → KHÔNG kết luận blocker từ get_window_state
    - VỊ TRÍ chip (đo screenshot 21/7, cửa sổ 2000px): HÀNG TAB STRIP (cùng hàng các tab, dưới menu bar, TRÊN toolbar), sát mép phải cửa sổ — tâm ≈ `(W−85, 71)` theo cửa sổ (2000px → ~(1915, 71)); hàng toolbar ngay dưới (y≈130) là Tiện ích (W−152) · avatar (W−80) · ⋮ (W−32) — đừng click nhầm hàng
    - Icon ✦ THỨ HAI trên MENU BAR macOS (~x1357, y22) = `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` — chỉ dùng AXPress, KHÔNG pixel click (y<44 là menu bar → pitfall takeover)
+   - Nút GHIM VÀO TOOLBAR (từ 21/7 user đã pin qua Tiện ích — layout hiện hành): nằm CÙNG HÀNG thanh địa chỉ, GIỮA icon Tiện ích và avatar profile, NGAY TRÁI avatar ~105px (đo 2000px: Tiện ích x≈1690 · Gemini ≈(1815, 32) · avatar x≈1920). Nút ghim toolbar là `AXButton "Hỏi Gemini"` CHUẨN → ƯU TIÊN click theo ELEMENT trong AX tree; anchor dự phòng: `(X_avatar − 105, Y_avatar)` — cùng hàng, KHÔNG trừ theo chiều dọc
 
    Thứ tự thao tác (mỗi cách CHỈ TOGGLE 1 LẦN rồi verify ngay, fail mới sang cách kế):
    - Cách 0 — KIỂM TRA ĐÃ MỞ CHƯA: `get_window_state` query "Đang chia sẻ|Gemini Chrome" → thấy = panel ĐANG mở, DỪNG (toggle nữa = tắt)
-   - Cách 1 (ưu tiên — không cần toạ độ/AX): `bring_to_front` Chrome → `hotkey(["cmd","shift","y"], FG)` → đợi ~2s → verify
+   - Cách 1 (nút đã ghim TOOLBAR — ưu tiên nhất): `get_window_state` fresh query "Hỏi Gemini" → thấy `AXButton` → click theo ELEMENT (không pixel) → verify; không thấy element → click anchor `(X_avatar − 105, Y_avatar)` từ element avatar → screenshot verify
+   - Cách 1b (không cần toạ độ/AX): `bring_to_front` Chrome → `hotkey(["cmd","shift","y"], FG)` → đợi ~2s → verify
    - Cách 2: lấy AX tree mức APP/menu bar (get_window_state theo window KHÔNG thấy) → `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` → AXPress 1 lần → verify
    - Cách 2b — System Events qua `terminal()` (ĐƯỜNG TIÊM KHÁC driver — dùng khi mọi click/hotkey của driver câm; cần quyền Accessibility, thường đã có):
      ```bash
