@@ -34,9 +34,9 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
 
 1. **Mở Hỏi Gemini panel**:
    - Cách 1: Click extensions (Tiện ích) → tìm `AXButton "Hỏi Gemini"` trong popup → click
-   - Cách 2: Pixel click (1460, 5) — nếu extension được pin
+   - Cách 2 (extension được pin): nút ✦ "Hỏi Gemini" nằm GÓC PHẢI TRÊN vùng tab strip của CỬA SỔ Chrome (screenshot 21/7: ~x1915 y71 với cửa sổ 2000px) — LẤY toạ độ từ frame element trong `get_window_state`, KHÔNG dùng toạ độ hardcode. Toạ độ cũ (1460, 5) đã SAI layout hiện tại: khi không fullscreen, y<40 là menu bar macOS → click vào đó dính pitfall "menu bar takeover"
    - CHỈ 1 LẦN (toggle). Click 2 lần = tắt.
-   - Verify: `get_window_state` → window title có "Bạn đang chia sẻ thẻ này với Gemini"
+   - Verify: `get_window_state` → window title có "Bạn đang chia sẻ thẻ này với Gemini", HOẶC panel có text `Đang chia sẻ "<tên đề>"` ngay trên ô nhập (marker này nằm sẵn trong AX tree — kiểm chứng screenshot 21/7)
 
 2. **Bắt đầu cuộc trò chuyện mới** (nếu có lịch sử cũ):
    - `get_window_state(max_elements=5000)` → tìm `AXButton "Bắt đầu cuộc trò chuyện mới"`
