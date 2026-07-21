@@ -33,7 +33,7 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
 ### Bước 2 - Chạy skill Gemini
 
 1. **Mở Hỏi Gemini panel** — hiểu đúng trước khi thao tác:
-   - TIỀN ĐỀ: gom về MỘT cửa sổ Chrome chứa tab đề (thu nhỏ/bỏ qua cửa sổ khác, KHÔNG kill Chrome). Hotkey/menu-item/click đánh vào CỬA SỔ ACTIVE — action và verify PHẢI cùng một window_id (list_windows lấy id mới → bring_to_front → xác nhận frontmost bằng title). Nhiều cửa sổ + verify sai target → chuỗi cách 1→4 thành toggle MỞ-ĐÓNG-MỞ-ĐÓNG (đã vấp thật 21/7 với 10 cửa sổ)
+   - TIỀN ĐỀ: chạy trên PROFILE Chrome THƯỜNG đã đăng nhập Google — KHÔNG Guest/"Vô danh" (guest làm extension từ chối synthetic toggle: 21/7 mọi hotkey/AXPress/click đều câm trên cửa sổ Vô danh, trong khi các phiên 1182 thành công đều ở profile thường). Gom về MỘT cửa sổ Chrome chứa tab đề (thu nhỏ/bỏ qua cửa sổ khác, KHÔNG kill Chrome). Hotkey/menu-item/click đánh vào CỬA SỔ ACTIVE — action và verify PHẢI cùng một window_id (list_windows lấy id mới → bring_to_front → xác nhận frontmost bằng title). Nhiều cửa sổ + verify sai target → chuỗi cách 1→4 thành toggle MỞ-ĐÓNG-MỞ-ĐÓNG (đã vấp thật 21/7 với 10 cửa sổ)
    - Sau MỖI lần toggle: CHỤP SCREENSHOT xác nhận bằng mắt rồi mới kết luận fail
    - Panel chào "Xin chào Vô danh" = CHƯA đăng nhập Google → menu `/` sẽ KHÔNG có skill "Thẩm định đề thi - dethimontoan.net" (skill gắn theo tài khoản) → phải đăng nhập đúng tài khoản TRƯỚC khi chạy tiếp
    - Panel là SIDE PANEL bên trong cửa sổ Chrome, KHÔNG phải cửa sổ riêng → `list_windows` không bao giờ thấy "cửa sổ Gemini" (đó KHÔNG phải dấu hiệu lỗi)
