@@ -13,7 +13,7 @@ Chrome → Gemini skill → trích xuất biên bản → commit raw lên GitHub
 # DANH SÁCH CHUẨN (URL đầy đủ + trạng thái ✅/⏳): xem references/exam-list.md — cập nhật file đó khi xong mỗi đề
 # Lớp mới: web_extract('https://dethimontoan.net/kho-de-thi/lop-N/') → parse URLs
 # Chạy lần lượt từng mã đề MIỄN PHÍ trước, trả PHÍ sau
-# Lớp 9: 1182 ✅ → 1183 ✅ → 1185 → 1186 → 1187 → 1188 → 1189 (KHÔNG có mã 1184)
+# Lớp 9: 1182 ✅ → 1183 🔄 (đã fix, CHỜ DEPLOY + verify lại) → 1185 → 1186 → 1187 → 1188 → 1189 (KHÔNG có mã 1184)
 ```
 
 ## Luồng chính
@@ -42,12 +42,11 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
    - `get_window_state(max_elements=5000)` → tìm `AXButton "Bắt đầu cuộc trò chuyện mới"`
    - Click nó (AXPress).
 
-3. **Gọi skill**:
+3. **Gọi skill** — đọc placeholder ô input để chọn ĐÚNG MỘT luồng (KHÔNG trộn `/` với `@`):
    - `press_key("f6", FG)` focus input
-   - `type_text("/", FG)` — verified:true = vào đúng ô
-   - Bản Gemini mới dùng `@` thay `/`: placeholder "Nhập @ để hỏi về một thẻ" → `type_text("@Thẩm định đề thi - dethimontoan.net", FG)` → return
-   - `get_window_state` → tìm `AXMenuItem "Thẩm định đề thi - dethimontoan.net"`
-   - Click skill (thành chip vàng) → Click `AXButton "Gửi"` — gõ nguyên tên skill rồi Enter KHÔNG kích hoạt skill
+   - Placeholder "Nhập nội dung / để sử dụng kỹ năng" → **luồng `/`**: `type_text("/", FG)` (verified:true = vào đúng ô) → `get_window_state` tìm `AXMenuItem "Thẩm định đề thi - dethimontoan.net"` → click
+   - Placeholder "Nhập @ để hỏi về một thẻ" (bản Gemini mới) → **luồng `@`**: `type_text("@Thẩm định đề thi - dethimontoan.net", FG)` → get fresh state, menu mention hiện mục skill → click (menu không click được mới `press_key("return")` chọn mục đang highlight)
+   - Verify skill đã thành CHIP vàng trong ô input RỒI MỚI Click `AXButton "Gửi"` — gõ nguyên tên skill + Enter khi chưa có chip = gửi tin nhắn thường, skill KHÔNG kích hoạt
    - **LUÔN get fresh state trước mỗi click** — element index thay đổi mỗi snapshot
 
 4. **Chờ kết quả — Poll 15s** (không sleep 120):
@@ -155,7 +154,7 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 - Đợi ~5s → Bước 2 (bỏ qua "Bắt đầu cuộc trò chuyện mới" nếu Gemini vẫn đang share)
 
 ### Bước 6 - Chuyển đề tiếp theo
-- Chuỗi ĐẠT chính xác (tín hiệu DUY NHẤT): **"TOÀN BỘ ĐỀ [MÃ] ĐÃ ĐẠT CHUẨN ĐỘC BẢN, CHÍNH XÁC VÀ ĐẢM BẢO TÍNH TRỰC QUAN. SẴN SÀNG PHÁT HÀNH."** → ✅ Đề này OK. Cập nhật trạng thái ✅ trong `references/exam-list.md`.
+- Chuỗi ĐẠT chính xác (tín hiệu DUY NHẤT): **"TOÀN BỘ ĐỀ [MÃ] ĐÃ ĐẠT CHUẨN ĐỘC BẢN, CHÍNH XÁC VÀ ĐẢM BẢO TÍNH TRỰC QUAN. SẴN SÀNG PHÁT HÀNH."** → ✅ Đề này OK. Cập nhật trạng thái trong `references/exam-list.md`: ✅ CHỈ khi chuỗi ĐẠT được thấy trên SITE ĐÃ DEPLOY; fix xong nhưng còn chờ deploy → đánh 🔄, phải quay lại verify trước khi sang đề mới.
   - **KHÔNG dừng.** Chuyển sang đề kế tiếp trong danh sách.
   - Quay lại **Bước 1** (navigate URL đề mới).
 - **Còn bất kỳ LỖI nào** → quay lại Bước 3 (extract biên bản) → Bước 4 (Claude Code fix).

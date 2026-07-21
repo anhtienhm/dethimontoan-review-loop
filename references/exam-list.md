@@ -12,9 +12,11 @@
 
 # Lớp 9 (Giữa HK1) — Đang xử lý
 
+Trạng thái: ✅ đạt (đã thấy chuỗi ĐẠT trên site SAU deploy) · 🔄 đã fix, chờ deploy + verify lại · ⏳ chưa xử lý
+
 - ✅ 1182: https://dethimontoan.net/de-thi-giua-hoc-ky-1-mon-toan-lop-9-1182/ (ĐẠT sau 5 lần thẩm định, 7 commit — xem session-learnings-20260721-v3.md)
-- ✅ 1183: https://dethimontoan.net/de-thi-giua-hoc-ky-1-mon-toan-lop-9-1183/ (ĐẠT — patch r2 đã push, verify lại sau deploy)
-- ⏳ 1185: https://dethimontoan.net/de-thi-giua-hoc-ky-1-mon-toan-lop-9-1185/ (KẾ TIẾP)
+- 🔄 1183: https://dethimontoan.net/de-thi-giua-hoc-ky-1-mon-toan-lop-9-1183/ (patch r2 đã push, CHỜ DEPLOY → chạy lại Gemini thấy chuỗi ĐẠT mới chuyển ✅ — xem session-learnings-20260721-v4.md)
+- ⏳ 1185: https://dethimontoan.net/de-thi-giua-hoc-ky-1-mon-toan-lop-9-1185/ (KẾ TIẾP sau khi 1183 ✅)
 - ⏳ 1186: https://dethimontoan.net/de-thi-giua-hoc-ky-1-mon-toan-lop-9-1186/
 - ⏳ 1187: https://dethimontoan.net/de-thi-giua-hoc-ky-1-mon-toan-lop-9-1187/
 - ⏳ 1188: https://dethimontoan.net/de-thi-giua-hoc-ky-1-mon-toan-lop-9-1188/
