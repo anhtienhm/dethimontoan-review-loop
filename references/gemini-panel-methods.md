@@ -1,11 +1,12 @@
 # Mở Hỏi Gemini — 3 phương pháp đã kiểm chứng
 
-## Vị trí nút Hỏi Gemini
-- Nằm ở **góc phải trên thanh tiêu đề Chrome** (vùng tab strip), KHÔNG phải toolbar.
-- Có biểu tượng **ngôi sao 4 cánh**, text "Hỏi Gemini".
-- y=33-79 (trên toolbar, dưới menu bar macOS).
-- KHÔNG xuất hiện trong AX tree (get_window_state). 
-- Click pixel thường chạm "background element" — thử nhiều tọa độ.
+## Vị trí nút Hỏi Gemini (đo từ screenshot 21/7, cửa sổ 2000px)
+- Chip ✦ "Hỏi Gemini" nằm ở **hàng tab strip** (cùng hàng các tab và nút "+", dưới menu bar macOS, TRÊN toolbar), **sát mép phải cửa sổ Chrome**.
+- Tâm chip ≈ **(W−85, 71)** theo toạ độ cửa sổ (W = bề rộng cửa sổ; 2000px → ~(1915, 71)); vùng chip ≈ x[W−157, W−10], y[55, 90].
+- Hàng toolbar NGAY DƯỚI (y≈130): Tiện ích (W−152) · avatar (W−80) · ⋮ (W−32) — đừng click nhầm hàng.
+- Icon ✦ THỨ HAI trên menu bar macOS (~x1357, y22) là `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` — chỉ dùng AXPress, không pixel click.
+- Chip KHÔNG xuất hiện trong AX tree (get_window_state) khi panel chưa mở — không thấy element ≠ không có extension.
+- Click pixel thường chạm "background element" — CHỤP SCREENSHOT xác định tâm rồi click, không click mù; ưu tiên Cmd+Shift+Y (Phương pháp 2) trước.
 
 ## Phương pháp 1: Click trực tiếp
 Thử click ở các tọa độ window-local: x=1440-1460, y=35-50.

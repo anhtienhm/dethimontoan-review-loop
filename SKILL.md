@@ -32,11 +32,19 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
 
 ### Bước 2 - Chạy skill Gemini
 
-1. **Mở Hỏi Gemini panel**:
-   - Cách 1: Click extensions (Tiện ích) → tìm `AXButton "Hỏi Gemini"` trong popup → click
-   - Cách 2 (extension được pin): nút ✦ "Hỏi Gemini" nằm GÓC PHẢI TRÊN vùng tab strip của CỬA SỔ Chrome (screenshot 21/7: ~x1915 y71 với cửa sổ 2000px) — LẤY toạ độ từ frame element trong `get_window_state`, KHÔNG dùng toạ độ hardcode. Toạ độ cũ (1460, 5) đã SAI layout hiện tại: khi không fullscreen, y<40 là menu bar macOS → click vào đó dính pitfall "menu bar takeover"
-   - CHỈ 1 LẦN (toggle). Click 2 lần = tắt.
-   - Verify: `get_window_state` → window title có "Bạn đang chia sẻ thẻ này với Gemini", HOẶC panel có text `Đang chia sẻ "<tên đề>"` ngay trên ô nhập (marker này nằm sẵn trong AX tree — kiểm chứng screenshot 21/7)
+1. **Mở Hỏi Gemini panel** — hiểu đúng trước khi thao tác:
+   - Panel là SIDE PANEL bên trong cửa sổ Chrome, KHÔNG phải cửa sổ riêng → `list_windows` không bao giờ thấy "cửa sổ Gemini" (đó KHÔNG phải dấu hiệu lỗi)
+   - Chip ✦ "Hỏi Gemini" KHÔNG xuất hiện trong AX tree khi panel chưa mở (không thấy element ≠ không có extension) → KHÔNG kết luận blocker từ get_window_state
+   - VỊ TRÍ chip (đo screenshot 21/7, cửa sổ 2000px): HÀNG TAB STRIP (cùng hàng các tab, dưới menu bar, TRÊN toolbar), sát mép phải cửa sổ — tâm ≈ `(W−85, 71)` theo cửa sổ (2000px → ~(1915, 71)); hàng toolbar ngay dưới (y≈130) là Tiện ích (W−152) · avatar (W−80) · ⋮ (W−32) — đừng click nhầm hàng
+   - Icon ✦ THỨ HAI trên MENU BAR macOS (~x1357, y22) = `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` — chỉ dùng AXPress, KHÔNG pixel click (y<44 là menu bar → pitfall takeover)
+
+   Thứ tự thao tác (mỗi cách CHỈ TOGGLE 1 LẦN rồi verify ngay, fail mới sang cách kế):
+   - Cách 0 — KIỂM TRA ĐÃ MỞ CHƯA: `get_window_state` query "Đang chia sẻ|Gemini Chrome" → thấy = panel ĐANG mở, DỪNG (toggle nữa = tắt)
+   - Cách 1 (ưu tiên — không cần toạ độ/AX): `bring_to_front` Chrome → `hotkey(["cmd","shift","y"], FG)` → đợi ~2s → verify
+   - Cách 2: lấy AX tree mức APP/menu bar (get_window_state theo window KHÔNG thấy) → `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` → AXPress 1 lần → verify
+   - Cách 3: toolbar `AXPopUpButton "Tiện ích"` (query "Tiện ích", KHÔNG query "Gemini" — tên nút không chứa chữ Gemini) → click → fresh state → `AXButton "Hỏi Gemini"` trong popup → click → Escape đóng popup → verify
+   - Cách 4 (cuối): CHỤP SCREENSHOT, xác định tâm chip ✦ bằng mắt (ước lượng `(W−85, 71)`) → pixel click đúng tâm; KHÔNG dùng toạ độ hardcode cũ (1460, 5)
+   - Verify: window title có "Bạn đang chia sẻ thẻ này với Gemini", HOẶC panel có text `Đang chia sẻ "<tên đề>"` / `AXWebArea "Gemini Chrome"` trong get_window_state
 
 2. **Bắt đầu cuộc trò chuyện mới** (nếu có lịch sử cũ):
    - `get_window_state(max_elements=5000)` → tìm `AXButton "Bắt đầu cuộc trò chuyện mới"`
@@ -165,6 +173,7 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 ## Pitfalls
 
 ### Gemini panel không mở
+- Thử TRƯỚC: `hotkey(["cmd","shift","y"], FG)` — toggle panel không cần toạ độ/AX (references/gemini-panel-methods.md, Phương pháp 2 đã kiểm chứng).
 - Dùng Chrome bar Gemini: tìm `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` trong `get_window_state` và press nó 1 lần.
 - Nếu không thấy node Gemini, mới fallback extension popup `AXButton "Hỏi Gemini"` hoặc sau đó click vùng panel.
 - Verify: `press_key("f6", FG)` → `type_text("/", FG)` — verified:true = panel mở + focus đúng ô.
