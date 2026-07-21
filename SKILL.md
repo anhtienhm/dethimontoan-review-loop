@@ -33,6 +33,9 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
 ### Bước 2 - Chạy skill Gemini
 
 1. **Mở Hỏi Gemini panel** — hiểu đúng trước khi thao tác:
+   - TIỀN ĐỀ: gom về MỘT cửa sổ Chrome chứa tab đề (thu nhỏ/bỏ qua cửa sổ khác, KHÔNG kill Chrome). Hotkey/menu-item/click đánh vào CỬA SỔ ACTIVE — action và verify PHẢI cùng một window_id (list_windows lấy id mới → bring_to_front → xác nhận frontmost bằng title). Nhiều cửa sổ + verify sai target → chuỗi cách 1→4 thành toggle MỞ-ĐÓNG-MỞ-ĐÓNG (đã vấp thật 21/7 với 10 cửa sổ)
+   - Sau MỖI lần toggle: CHỤP SCREENSHOT xác nhận bằng mắt rồi mới kết luận fail
+   - Panel chào "Xin chào Vô danh" = CHƯA đăng nhập Google → menu `/` sẽ KHÔNG có skill "Thẩm định đề thi - dethimontoan.net" (skill gắn theo tài khoản) → phải đăng nhập đúng tài khoản TRƯỚC khi chạy tiếp
    - Panel là SIDE PANEL bên trong cửa sổ Chrome, KHÔNG phải cửa sổ riêng → `list_windows` không bao giờ thấy "cửa sổ Gemini" (đó KHÔNG phải dấu hiệu lỗi)
    - Chip ✦ "Hỏi Gemini" KHÔNG xuất hiện trong AX tree khi panel chưa mở (không thấy element ≠ không có extension) → KHÔNG kết luận blocker từ get_window_state
    - VỊ TRÍ chip (đo screenshot 21/7, cửa sổ 2000px): HÀNG TAB STRIP (cùng hàng các tab, dưới menu bar, TRÊN toolbar), sát mép phải cửa sổ — tâm ≈ `(W−85, 71)` theo cửa sổ (2000px → ~(1915, 71)); hàng toolbar ngay dưới (y≈130) là Tiện ích (W−152) · avatar (W−80) · ⋮ (W−32) — đừng click nhầm hàng
@@ -44,6 +47,8 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
    - Cách 2: lấy AX tree mức APP/menu bar (get_window_state theo window KHÔNG thấy) → `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` → AXPress 1 lần → verify
    - Cách 3: toolbar `AXPopUpButton "Tiện ích"` (query "Tiện ích", KHÔNG query "Gemini" — tên nút không chứa chữ Gemini) → click → fresh state → `AXButton "Hỏi Gemini"` trong popup → click → Escape đóng popup → verify
    - Cách 4 (cuối): CHỤP SCREENSHOT, xác định tâm chip ✦ bằng mắt (ước lượng `(W−85, 71)`) → pixel click đúng tâm; KHÔNG dùng toạ độ hardcode cũ (1460, 5)
+   - Cách 5 (đủ cách 1→4 × 2 vòng vẫn fail — NGOẠI LỆ duy nhất của luật "không hỏi user"): nhờ user MỞ PANEL THỦ CÔNG 1 lần (+ đăng nhập Google nếu đang "Vô danh") rồi tự chạy tiếp — KHÔNG retry vô hạn
+   - Từ vòng lặp SAU (panel từng mở, Cmd+R làm mất sharing): KHÔNG toggle chip nữa — tìm `AXButton "Mở Gemini trong Chrome"`/nút re-share trong AX tree và click (nút này CÓ trong tree)
    - Verify: window title có "Bạn đang chia sẻ thẻ này với Gemini", HOẶC panel có text `Đang chia sẻ "<tên đề>"` / `AXWebArea "Gemini Chrome"` trong get_window_state
 
 2. **Bắt đầu cuộc trò chuyện mới** (nếu có lịch sử cũ):
@@ -245,6 +250,12 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 - `list_windows` → lấy window_id mới nếu cũ không hoạt động
 - `bring_to_front` để focus window
 
+### Toggle panel "fail" liên tục khi có NHIỀU cửa sổ Chrome (đã vấp 21/7)
+- Triệu chứng: thử đủ hotkey/AXPress/popup/pixel — verify vẫn báo panel không mở
+- Nguyên nhân: 10 cửa sổ Chrome — action đánh vào cửa sổ ACTIVE, verify đọc window_id KHÁC → false negative; và vì "fail mới sang cách kế", chuỗi cách thành toggle MỞ-ĐÓNG-MỞ-ĐÓNG
+- Fix: gom về 1 cửa sổ; trước mỗi action bring_to_front + xác nhận frontmost; action và verify cùng window_id; screenshot xác nhận sau mỗi toggle
+- Kẹt thật sau 2 vòng đủ cách → Cách 5: nhờ user mở thủ công 1 lần (ngoại lệ luật "không hỏi user")
+
 ## Tham khảo (references/)
 Đọc ĐÚNG file khi cần, đừng load tất cả:
 - `exam-list.md` — danh sách đề đầy đủ + trạng thái ✅/⏳ (CẬP NHẬT khi xong mỗi đề)
@@ -258,7 +269,7 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 
 ## Luật bất biến
 - **GỬI NGUYÊN VĂN, KHÔNG RÚT GỌN DÙ 1 TỪ**
-- **KHÔNG hỏi user** — tự retry/reset, KHÔNG hỏi "có muốn tiếp tục không"
+- **KHÔNG hỏi user** — tự retry/reset, KHÔNG hỏi "có muốn tiếp tục không" (ngoại lệ DUY NHẤT: blocker UI cứng theo Cách 5 Bước 2.1 — nhờ thao tác thủ công 1 lần rồi tự chạy tiếp)
 - **Reload tab trước mỗi lần chạy Gemini**
 - **Luôn get fresh state trước click**
 - **Tự động poll 15s — không sleep 120s**
