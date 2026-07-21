@@ -33,21 +33,36 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
 ### Bước 2 - Chạy skill Gemini
 
 1. **Mở Hỏi Gemini panel** — hiểu đúng trước khi thao tác:
-   - TIỀN ĐỀ: gom về MỘT cửa sổ Chrome chứa tab đề (thu nhỏ/bỏ qua cửa sổ khác, KHÔNG kill Chrome). Hotkey/menu-item/click đánh vào CỬA SỔ ACTIVE — action và verify PHẢI cùng một window_id (list_windows lấy id mới → bring_to_front → xác nhận frontmost bằng title). Nhiều cửa sổ + verify sai target → chuỗi cách 1→4 thành toggle MỞ-ĐÓNG-MỞ-ĐÓNG (đã vấp thật 21/7 với 10 cửa sổ)
+   - TIỀN ĐỀ: chạy trên PROFILE Chrome THƯỜNG đã đăng nhập Google — KHÔNG Guest/"Vô danh" (guest làm extension từ chối synthetic toggle: 21/7 mọi hotkey/AXPress/click đều câm trên cửa sổ Vô danh, trong khi các phiên 1182 thành công đều ở profile thường). Gom về MỘT cửa sổ Chrome chứa tab đề (thu nhỏ/bỏ qua cửa sổ khác, KHÔNG kill Chrome). Hotkey/menu-item/click đánh vào CỬA SỔ ACTIVE — action và verify PHẢI cùng một window_id (list_windows lấy id mới → bring_to_front → xác nhận frontmost bằng title). Nhiều cửa sổ + verify sai target → chuỗi cách 1→4 thành toggle MỞ-ĐÓNG-MỞ-ĐÓNG (đã vấp thật 21/7 với 10 cửa sổ)
    - Sau MỖI lần toggle: CHỤP SCREENSHOT xác nhận bằng mắt rồi mới kết luận fail
    - Panel chào "Xin chào Vô danh" = CHƯA đăng nhập Google → menu `/` sẽ KHÔNG có skill "Thẩm định đề thi - dethimontoan.net" (skill gắn theo tài khoản) → phải đăng nhập đúng tài khoản TRƯỚC khi chạy tiếp
    - Panel là SIDE PANEL bên trong cửa sổ Chrome, KHÔNG phải cửa sổ riêng → `list_windows` không bao giờ thấy "cửa sổ Gemini" (đó KHÔNG phải dấu hiệu lỗi)
    - Chip ✦ "Hỏi Gemini" KHÔNG xuất hiện trong AX tree khi panel chưa mở (không thấy element ≠ không có extension) → KHÔNG kết luận blocker từ get_window_state
    - VỊ TRÍ chip (đo screenshot 21/7, cửa sổ 2000px): HÀNG TAB STRIP (cùng hàng các tab, dưới menu bar, TRÊN toolbar), sát mép phải cửa sổ — tâm ≈ `(W−85, 71)` theo cửa sổ (2000px → ~(1915, 71)); hàng toolbar ngay dưới (y≈130) là Tiện ích (W−152) · avatar (W−80) · ⋮ (W−32) — đừng click nhầm hàng
    - Icon ✦ THỨ HAI trên MENU BAR macOS (~x1357, y22) = `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` — chỉ dùng AXPress, KHÔNG pixel click (y<44 là menu bar → pitfall takeover)
+   - Nút GHIM VÀO TOOLBAR (từ 21/7 user đã pin qua Tiện ích — layout hiện hành): nằm CÙNG HÀNG thanh địa chỉ, GIỮA icon Tiện ích và avatar profile, NGAY TRÁI avatar ~105px (đo 2000px: Tiện ích x≈1690 · Gemini ≈(1815, 32) · avatar x≈1920). Nút ghim toolbar là `AXButton "Hỏi Gemini"` CHUẨN → ƯU TIÊN click theo ELEMENT trong AX tree; anchor dự phòng: `(X_avatar − 105, Y_avatar)` — cùng hàng, KHÔNG trừ theo chiều dọc
 
    Thứ tự thao tác (mỗi cách CHỈ TOGGLE 1 LẦN rồi verify ngay, fail mới sang cách kế):
    - Cách 0 — KIỂM TRA ĐÃ MỞ CHƯA: `get_window_state` query "Đang chia sẻ|Gemini Chrome" → thấy = panel ĐANG mở, DỪNG (toggle nữa = tắt)
-   - Cách 1 (ưu tiên — không cần toạ độ/AX): `bring_to_front` Chrome → `hotkey(["cmd","shift","y"], FG)` → đợi ~2s → verify
+   - Cách 1 (nút đã ghim TOOLBAR — ưu tiên nhất, ĐÃ KIỂM CHỨNG chạy thật 21/7): `get_window_state` fresh query "Hỏi Gemini" → thấy `AXButton` → click theo ELEMENT (không pixel) → verify; không thấy element → click anchor `(X_avatar − 105, Y_avatar)` từ element avatar → screenshot verify
+   - Cách 1b (không cần toạ độ/AX): `bring_to_front` Chrome → `hotkey(["cmd","shift","y"], FG)` → đợi ~2s → verify
    - Cách 2: lấy AX tree mức APP/menu bar (get_window_state theo window KHÔNG thấy) → `AXMenuBarItem [help="Bật/tắt Gemini trong Chrome"]` → AXPress 1 lần → verify
+   - Cách 2b — System Events qua `terminal()` (ĐƯỜNG TIÊM KHÁC driver — dùng khi mọi click/hotkey của driver câm; cần quyền Accessibility, thường đã có):
+     ```bash
+     # Thăm dò: nút "Hỏi Gemini" có trong AX của System Events không (get_window_state không thấy ≠ System Events không thấy)
+     osascript -e 'tell application "System Events" to tell process "Google Chrome" to get name of every button of window 1'
+     # Có tên chứa Gemini → click thẳng theo tên:
+     osascript -e 'tell application "Google Chrome" to activate' -e 'delay 0.5' \
+               -e 'tell application "System Events" to tell process "Google Chrome" to click (first button of window 1 whose name contains "Gemini")'
+     # Không có nút → gõ phím tắt qua System Events:
+     osascript -e 'tell application "Google Chrome" to activate' -e 'delay 0.5' \
+               -e 'tell application "System Events" to keystroke "y" using {command down, shift down}'
+     ```
+     Lỗi "not allowed assistive access" → nhờ user cấp quyền Accessibility cho app chạy terminal (setup 1 lần)
    - Cách 3: toolbar `AXPopUpButton "Tiện ích"` (query "Tiện ích", KHÔNG query "Gemini" — tên nút không chứa chữ Gemini) → click → fresh state → `AXButton "Hỏi Gemini"` trong popup → click → Escape đóng popup → verify
    - Cách 4 (cuối): CHỤP SCREENSHOT, xác định tâm chip ✦ bằng mắt (ước lượng `(W−85, 71)`) → pixel click đúng tâm; KHÔNG dùng toạ độ hardcode cũ (1460, 5)
-   - Cách 5 (đủ cách 1→4 × 2 vòng vẫn fail — NGOẠI LỆ duy nhất của luật "không hỏi user"): nhờ user MỞ PANEL THỦ CÔNG 1 lần (+ đăng nhập Google nếu đang "Vô danh") rồi tự chạy tiếp — KHÔNG retry vô hạn
+   - Cách 5 (đủ cách 1→4 × 2 vòng vẫn fail — NGOẠI LỆ duy nhất của luật "không hỏi user"): nhờ user SETUP MÔI TRƯỜNG 1 LẦN — đăng nhập Google/profile thường (+ mở panel hộ lần đầu) — KHÔNG phải nhờ mở hộ mỗi vòng; sau setup đúng, quay lại Cách 1 (các cách tự động thường sống lại — kỷ nguyên 1182 chạy tự động hoàn toàn trên profile thường)
+   - Đường thoát CHIẾN LƯỢC nếu side panel mãi không click được: chuyển sang `gemini.google.com` mở trong TAB — web page thường nên automate được 100% bằng page()/CDP (xem pitfalls.md mục "Gemini web app"); Gem "Thẩm định đề thi" có trong web app, gửi URL đề trong prompt thay vì chia sẻ tab — cần user chạy thử 1 lần để xác nhận biên bản chấm qua URL đạt chất lượng như chấm tab share
    - Từ vòng lặp SAU (panel từng mở, Cmd+R làm mất sharing): KHÔNG toggle chip nữa — tìm `AXButton "Mở Gemini trong Chrome"`/nút re-share trong AX tree và click (nút này CÓ trong tree)
    - Verify: window title có "Bạn đang chia sẻ thẻ này với Gemini", HOẶC panel có text `Đang chia sẻ "<tên đề>"` / `AXWebArea "Gemini Chrome"` trong get_window_state
 
@@ -55,11 +70,19 @@ Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-me
    - `get_window_state(max_elements=5000)` → tìm `AXButton "Bắt đầu cuộc trò chuyện mới"`
    - Click nó (AXPress).
 
-3. **Gọi skill** — đọc placeholder ô input để chọn ĐÚNG MỘT luồng (KHÔNG trộn `/` với `@`):
-   - `press_key("f6", FG)` focus input
-   - Placeholder "Nhập nội dung / để sử dụng kỹ năng" → **luồng `/`**: `type_text("/", FG)` (verified:true = vào đúng ô) → `get_window_state` tìm `AXMenuItem "Thẩm định đề thi - dethimontoan.net"` → click
-   - Placeholder "Nhập @ để hỏi về một thẻ" (bản Gemini mới) → **luồng `@`**: `type_text("@Thẩm định đề thi - dethimontoan.net", FG)` → get fresh state, menu mention hiện mục skill → click (menu không click được mới `press_key("return")` chọn mục đang highlight)
-   - Verify skill đã thành CHIP vàng trong ô input RỒI MỚI Click `AXButton "Gửi"` — gõ nguyên tên skill + Enter khi chưa có chip = gửi tin nhắn thường, skill KHÔNG kích hoạt
+3. **Gọi skill "Thẩm định đề thi - dethimontoan.net"** — đọc placeholder ô nhập để chọn ĐÚNG MỘT luồng (KHÔNG trộn `/` với `@`). LUẬT CỨNG: **KHÔNG nhấn Enter khi ô nhập CHƯA có chip skill** — Enter lúc đó = gửi tin nhắn thường, skill KHÔNG kích hoạt:
+   1. Focus ô nhập: `press_key("f6", FG)` → gõ `type_text("/", FG)`:
+      - `verified:true` + menu bật = đã vào đúng ô → sang bước 2
+      - `verified:false` HOẶC menu không hiện = ĐANG SAI CHỖ (nguy cơ gõ vào address bar → Chrome navigate URL lạ — đã vấp): get fresh state → CLICK thẳng vào Ô NHẬP của panel (AXTextArea/AXTextField ngay dưới dòng "Đang chia sẻ") → xoá ký tự thừa nếu có → gõ lại `/`
+   2. **Luồng `/`** (placeholder "Nhập nội dung / để sử dụng kỹ năng"):
+      - Gõ `/` xong đợi ~1s cho menu "Kỹ năng của bạn" hiện
+      - `get_window_state` FRESH → tìm `AXMenuItem "Thẩm định đề thi - dethimontoan.net"` → CLICK theo element
+      - Click không ăn → lấy frame của item từ AX tree → pixel click vào TÂM frame
+      - Cần lọc menu thì gõ thêm "Thẩm" — nhưng TUYỆT ĐỐI không Enter
+      - Menu KHÔNG có mục skill → tài khoản sai/chưa đăng nhập Google (skill gắn theo tài khoản) → DỪNG báo user, KHÔNG gõ tên skill bằng tay rồi gửi
+   3. **Luồng `@`** (placeholder "Nhập @ để hỏi về một thẻ"): `type_text("@Thẩm định đề thi - dethimontoan.net", FG)` → get fresh state → menu mention hiện mục skill → click (click không được mới `press_key("return")` chọn mục đang highlight)
+   4. **VERIFY CHIP**: get fresh state + chụp screenshot — ô nhập phải hiện CHIP VÀNG "Thẩm định đề thi - dethimontoan.net". Chưa có chip → quay lại bước 1, KHÔNG bấm Gửi
+   5. Có chip → get fresh state → click `AXButton "Gửi"` → chụp screenshot xác nhận tin ĐÃ GỬI (luật verify bằng ảnh — đừng tin verified:true suông)
    - **LUÔN get fresh state trước mỗi click** — element index thay đổi mỗi snapshot
 
 4. **Chờ kết quả — Poll 15s** (không sleep 120):
