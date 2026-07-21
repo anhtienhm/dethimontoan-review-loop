@@ -5,7 +5,7 @@
 - Background `claude` interactive cần handle trust dialog (chọn `1` rồi submit), nhưng vẫn có thể treo do limit/effort
 
 ## Biên bản rõ ràng quan trọng
-- Khi Gemini báo lỗi lần sau, PHẢI dùng BIÊN BẢN MỚI NHẤT làm căn cỡ fix, không dùng biên bản cũ
+- Khi Gemini báo lỗi lần sau, PHẢI dùng BIÊN BẢN MỚI NHẤT làm căn cứ fix, không dùng biên bản cũ
 - Biên bản cần ghi rõ: số lần thử, các lỗi còn lại, đề xuất sửa chính xác từng câu
 
 ## Claude Code Web Remote

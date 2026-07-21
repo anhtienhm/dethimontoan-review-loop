@@ -10,17 +10,17 @@ Chrome → Gemini skill → trích xuất biên bản → commit raw lên GitHub
 
 ## Danh sách đề (lấy URLs)
 ```bash
-# Lớp 9: web_extract('https://dethimontoan.net/kho-de-thi/lop-9/')
-# Lớp 10: web_extract('https://dethimontoan.net/kho-de-thi/lop-10/')
-# Lớp 11-12: thay lop-N/
-# Parse URLs từ danh sách, chạy lần lượt từng mã đề MIỄN PHÍ trước, trả PHÍ sau
-# Lớp 9 miễn phí: 1182→1183→1184→1185 (theo thứ tự)
+# DANH SÁCH CHUẨN (URL đầy đủ + trạng thái ✅/⏳): xem references/exam-list.md — cập nhật file đó khi xong mỗi đề
+# Lớp mới: web_extract('https://dethimontoan.net/kho-de-thi/lop-N/') → parse URLs
+# Chạy lần lượt từng mã đề MIỄN PHÍ trước, trả PHÍ sau
+# Lớp 9: 1182 ✅ → 1183 ✅ → 1185 → 1186 → 1187 → 1188 → 1189 (KHÔNG có mã 1184)
 ```
 
 ## Luồng chính
 **Claude Code Web Remote** (https://claude.ai/code) — ổn định hơn CLI.
-**FALLBACK**: Claude Code CLI (`claude -p`) — cần PATH.
-**CUỐI CÙNG**: Claude.app desktop.
+**FALLBACK**: Claude Code CLI (`claude -p`) — cần PATH; hay treo >180s khi đọc raw file → đặt timeout, treo thì quay về Web Remote.
+**CUỐI CÙNG**: Claude.app desktop (KHÔNG đọc được local file — chỉ type_text chunks).
+Chi tiết từng phương pháp + cách gửi biên bản: `references/paste-methods.md`.
 
 ## 6 Bước
 
@@ -45,20 +45,22 @@ Chrome → Gemini skill → trích xuất biên bản → commit raw lên GitHub
 3. **Gọi skill**:
    - `press_key("f6", FG)` focus input
    - `type_text("/", FG)` — verified:true = vào đúng ô
+   - Bản Gemini mới dùng `@` thay `/`: placeholder "Nhập @ để hỏi về một thẻ" → `type_text("@Thẩm định đề thi - dethimontoan.net", FG)` → return
    - `get_window_state` → tìm `AXMenuItem "Thẩm định đề thi - dethimontoan.net"`
-   - Click skill → Click `AXButton "Gửi"`
+   - Click skill (thành chip vàng) → Click `AXButton "Gửi"` — gõ nguyên tên skill rồi Enter KHÔNG kích hoạt skill
    - **LUÔN get fresh state trước mỗi click** — element index thay đổi mỗi snapshot
 
 4. **Chờ kết quả — Poll 15s** (không sleep 120):
    - `get_window_state` mỗi 15s, tìm "BIÊN BẢN THẨM ĐỊNH" + "Gemini là một AI" trong result
    - Tối đa 20 lần (5 phút). Nếu quá → reload tab + chạy lại.
    ```python
-   from hermes_tools import terminal
+   from hermes_tools import mcp__cua_driver__get_window_state as get_window_state
    import time
-   for i in range(20):
+   for _ in range(20):  # tối đa 5 phút
        time.sleep(15)
-       r = terminal("grep -c 'BIÊN BẢN THẨM ĐỊNH.*1182' /tmp/result.txt")
-       if 'done': break
+       r = get_window_state(pid=..., window_id=..., max_elements=2000, query="BIÊN BẢN|Gemini là một AI")
+       if 'BIÊN BẢN THẨM ĐỊNH' in str(r) and 'Gemini là một AI' in str(r):
+           break  # Gemini đã trả xong
    ```
 
 ### Bước 3 - Trích xuất biên bản (NGUYÊN VĂN)
@@ -69,16 +71,25 @@ Dùng kết quả của `get_window_state(max_elements=2000, query="BIÊN BẢN|
 **Phương pháp 2 — từ file dump (fallback)**:
 - **NGUYÊN VĂN, KHÔNG RÚT GỌN**
 - KHÔNG dùng nút "Sao chép" (AXPress không trigger clipboard)
+- Script parse dump + dấu hiệu nhận biết element: `references/extract-script.md`
+
+**Định dạng biên bản chuẩn** (checklist xác nhận extract ĐỦ trước khi gửi):
+- Dòng đầu: `BIÊN BẢN THẨM ĐỊNH (MÃ ĐỀ: XXXX)` (có thể kèm `- LẦN N`)
+- Đúng 10 dòng `Tiêu chí k (…): ĐẠT/LỖI - …`
+- Có LỖI → PHẢI có mục `ĐỀ XUẤT SỬA ĐỔI` (mc: field `q/o/c/e`; sa: `q/c/e` với barem `Bước k (0,25đ):`)
+- ⚠️ Map field khi apply: biên bản ghi `c:` cho đáp án sa nhưng data JSON dùng `ans` (chỉ mc dùng `c`) — thực tế 1182: biên bản `c: 90` → code `'ans' => '90'`
+- Thiếu phần nào → extract lại, KHÔNG gửi biên bản cụt
 
 ### Bước 4 - Claude Code tạo PHP patch
 
 **PHƯƠNG PHÁP 1 — Claude Code Web Remote (ƯU TIÊN)**:
 1. Trích xuất biên bản → `/tmp/bienban_XXXX.txt` (NGUYÊN VĂN)
 2. Copy vào repo: `cp /tmp/bienban_XXXX.txt /tmp/dethimontoan.net/raw_bienban_XXXX.txt`
-3. Commit lên GitHub: `git add && git commit -m "raw bien ban XXXX" && git push`
+   — MỖI ĐỀ CHỈ 1 FILE `raw_bienban_XXXX.txt`, vòng sau GHI ĐÈ vòng trước (khớp luật "chỉ dùng biên bản mới nhất"); KHÔNG tạo `bienban_XXXX.txt`/`_lanN.txt` mới (1182 từng để lại 4 file rác); số lần ghi ở dòng đầu biên bản + commit message
+3. Commit lên GitHub: `git add raw_bienban_XXXX.txt && git commit -m "raw bien ban XXXX lan N" && git pull --rebase origin main && git push origin main`
 4. Mở `https://claude.ai/code` trong Chrome
 5. Click session "dethimontoan.net" trong sidebar
-6. `type_text(instruction, FG)` vào Prompt → `press_key(return)` — KHÔNG FG
+6. `type_text(instruction, FG)` vào Prompt → `press_key(return)` — KHÔNG BAO GIỜ FG cho Return (FG Return làm mất keyboard focus → gõ xong mà KHÔNG gửi); type_text/click/F6 thì dùng FG bình thường
 7. Sidebar hiện "Running dethimontoan.net"
 8. **Tự động poll 15s** kiểm tra sidebar còn Running không:
    - `get_window_state` query "Running dethimontoan" — nếu không còn → done
@@ -86,9 +97,9 @@ Dùng kết quả của `get_window_state(max_elements=2000, query="BIÊN BẢN|
 
 **Yêu cầu mẫu cho Claude Code Web**:
 ```
-Đọc raw_bienban_XXXX.txt (biên bản Gemini) và inc/patch_XXXX.php (patch hiện tại).
-Cập nhật patch_XXXX.php để khớp chính xác đề xuất Gemini.
-Giữ NGUYÊN các fix cũ (r1, r2...). Bump option nếu cần. Commit push.
+Đọc raw_bienban_XXXX.txt (biên bản Gemini) và TẤT CẢ patch hiện có của đề: inc/patch_XXXX*.php
+(có thể có file revision riêng như patch_XXXX_r2.php). Cập nhật patch để khớp chính xác đề xuất
+Gemini. Giữ NGUYÊN các fix cũ (r1, r2...). Bump option nếu cần. Commit push.
 ```
 
 **PHƯƠNG PHÁP 2 — Claude Code CLI (FALLBACK)**:
@@ -96,14 +107,21 @@ Giữ NGUYÊN các fix cũ (r1, r2...). Bump option nếu cần. Commit push.
 export PATH="$HOME/.local/bin:$PATH"
 cd /tmp/dethimontoan.net
 claude auth status --text || claude auth login
-claude -p '...' --allowedTools "Read,Write,Edit,Execute" --max-turns 40
+claude -p '...' --allowedTools "Read,Write,Edit,Bash" --max-turns 40
 ```
-⚠️ CLI timeout 300s (mặc định). Cần `pty=true` trong terminal() vì Claude CLI cần PTY. Dùng `--allowedTools "Read,Write,Edit,Execute"` (không "WebFetch" — WebFetch hay bị lỗi permission). Nếu session chặn git write, tự tay `git add/commit/push` sau.
+⚠️ CLI timeout 300s (mặc định). Cần `pty=true` trong terminal() vì Claude CLI cần PTY. Dùng `--allowedTools "Read,Write,Edit,Bash"` (tool chạy lệnh tên là "Bash", không phải "Execute"; không thêm "WebFetch" — WebFetch hay bị lỗi permission). Nếu session chặn git write, tự tay `git add/commit/push` sau. `claude -p` có thể TREO >180s khi đọc raw_bienban (đề 1183 đã gặp) → đừng đợi quá 5 phút, chuyển Web Remote hoặc tự tạo patch fallback.
 
 **⚠️ Quản lý tab khi dùng Web Remote**:
 - Tab claude.ai/code KHÔNG navigate đi nơi khác
 - Khi cần navigate exam URL: dùng TAB KHÁC hoặc Cmd+L
 - page() navigate TAB HIỆN TẠI → chỉ dùng khi tab đang ở exam
+
+**Quy ước patch (đúc kết từ patch_1182/1183 chạy thật)**:
+- Hàm + gate option TRÙNG TÊN dạng `ttp_patch_<mã>_rN_v1` (hook `wp_loaded`, có option → bỏ qua)
+- Revision mới: thêm hàm rN vào `inc/patch_XXXX.php` (1182 gom r1–r3 một file) hoặc file riêng `inc/patch_XXXX_rN.php` (1183 r2 — đường fallback)
+- Sửa lại revision ĐÃ áp trên server: GIỮ tên hàm, BUMP hậu tố option (`_r2c_v1` → `_r2d_v1`) để chạy lại; guard theo NỘI DUNG MỚI ⇒ idempotent
+- Guard phải UNIQUE với nội dung mới, KHÔNG trùng nội dung cũ (guard `AH² = BH·CH` từng khớp nhầm lời giải cũ → barem không áp); sa đổi cả câu → guard theo `q`, chỉ thêm barem → guard theo `e` — bảng chi tiết: `references/patch-loop-sa-bug.md`
+- ⚠️ TRƯỚC khi thêm hàm/file mới: `grep -rn "ttp_patch_<mã>" inc/` — trùng tên hàm → Fatal "Cannot redeclare" → 500 TOÀN SITE (`php -l` KHÔNG bắt được trùng tên liên-file)
 
 **Commit & push**:
 ```bash
@@ -118,23 +136,26 @@ git pull --rebase origin main && git push origin main
 
 ### Bước 4.2 - Tự động theo dõi Claude Code (poll 15s)
 ```python
-from hermes_tools import [terminal, mcp__cua_driver__get_window_state]
+from hermes_tools import terminal, mcp__cua_driver__get_window_state as get_window_state
 import time
-for i in range(40):  # Tối đa 10 phút
+
+for _ in range(40):  # Tối đa 10 phút (40 lần x 15s)
     time.sleep(15)
     r = get_window_state(pid=..., window_id=..., max_elements=100, query="Running dethimontoan")
     if 'Running' not in r['result']: break  # Done
-# Kiểm tra commit mới
+
+# Kiểm tra commit mới — có thể có SESSION THỨ HAI cùng push (GitHub auto-deploy) → LUÔN pull trước khi verify
 terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 ```
 
 ### Bước 5 - Reload → Gemini lại
 - Nếu đang ở claude.ai/code: chuyển tab exam (dùng tab khác), reload Cmd+R
 - Nếu đã ở exam tab: Cmd+R reload
-- Đợi ~5s → Bước 2 (bỏ qua "Bắt đầu cuộc trò chuyện mới" nếu Gemini đã share)
+- Sau Cmd+R Gemini thường MẤT tab sharing → mở lại panel (Bước 2.1) rồi mới gọi skill
+- Đợi ~5s → Bước 2 (bỏ qua "Bắt đầu cuộc trò chuyện mới" nếu Gemini vẫn đang share)
 
 ### Bước 6 - Chuyển đề tiếp theo
-- **"TOÀN BỘ ĐỀ [MÃ] ĐÃ ĐẠT CHUẨN..."** → ✅ Đề này OK.
+- Chuỗi ĐẠT chính xác (tín hiệu DUY NHẤT): **"TOÀN BỘ ĐỀ [MÃ] ĐÃ ĐẠT CHUẨN ĐỘC BẢN, CHÍNH XÁC VÀ ĐẢM BẢO TÍNH TRỰC QUAN. SẴN SÀNG PHÁT HÀNH."** → ✅ Đề này OK. Cập nhật trạng thái ✅ trong `references/exam-list.md`.
   - **KHÔNG dừng.** Chuyển sang đề kế tiếp trong danh sách.
   - Quay lại **Bước 1** (navigate URL đề mới).
 - **Còn bất kỳ LỖI nào** → quay lại Bước 3 (extract biên bản) → Bước 4 (Claude Code fix).
@@ -170,8 +191,9 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 
 ### Claude Code không chạy (sidebar không chuyển Running)
 - Gửi instruction xong, sidebar vẫn "Idle" → lệnh chưa đến prompt
-- **Fix**: reload tab claude.ai/code, click session lại, type_text FG lại, press_key return
-- Nguyên nhân: press_key return KHÔNG FG hay bị chặn; type_text vào prompt sai element
+- Nguyên nhân: type_text vào SAI element (Claude có 2+ AXWindow → nhiều Prompt textarea), hoặc DÙNG FG cho press_key(return) — FG Return làm mất keyboard focus → gõ xong mà không gửi (kiểm chứng 2026-07-21)
+- **Fix**: reload tab claude.ai/code, click ĐÚNG session "dethimontoan.net" (không prefix Error/Running), type_text FG lại, press_key("return") KHÔNG FG
+- KHÔNG xoá conversation cũ — chỉ gõ instruction mới; session "Error" → tạo New session rồi gửi lại
 
 ### Merge conflict khi push
 - Remote có changes → `git pull --rebase origin main`
@@ -185,7 +207,7 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 - Triệu chứng: "Câu 4 (7x=0)" vẫn xuất hiện → patch chưa chạy
 
 ### Gửi biên bản cho Claude Code — YÊU CẦU CỨNG
-- **GUYỀN TẮC**: Gửi cho Claude Code PHẢI là **nội dung ĐẦY ĐỦ và CHÍNH XÁC 100%** của biên bản thẩm định Gemini. **TUYỆT ĐỐI KHÔNG rút gọn, tóm tắt, hay diễn giải lại biên bản.**
+- **NGUYÊN TẮC**: Gửi cho Claude Code PHẢI là **nội dung ĐẦY ĐỦ và CHÍNH XÁC 100%** của biên bản thẩm định Gemini. **TUYỆT ĐỐI KHÔNG rút gọn, tóm tắt, hay diễn giải lại biên bản.**
 - Claude Code PHẢI fix **chính xác theo đề xuất trong biên bản**, **KHÔNG được lệch hướng fix lòng vòng** hay tự ý thay đổi yêu cầu.
 - Nếu Claude Code tạo patch KHÁC đề xuất Gemini → **dừng ngay**, đọc raw_bienban, gửi lệnh update chính xác theo biên bản.
 - Bug thường gặp: Claude Code chỉ apply `e` (barem), quên `q`+`ans` cho sa — bump gate option để chạy lại.
@@ -206,15 +228,32 @@ terminal("cd /tmp/dethimontoan.net && git pull && git log --oneline -3")
 - Dùng dấu hiệu "Gemini là một AI" làm điểm dừng
 - Dùng `structuredContent.elements` để truy cập chính xác
 
+### Biên bản bị RỚT ký tự khi extract (AX label)
+- Dấu nhân `·` và đoạn đứng sau dấu ngoặc kép có thể bị rớt/đứt dòng khi ghép label — thực tế 1182 lần 5: `AB^2 = BH` ⏎ `BC` (mất `·`), dòng TC5/TC10 đứt giữa câu
+- Vẫn gửi NGUYÊN VĂN phần trích được (không tự "vá" lại biên bản)
+- Claude Code khi APPLY phải khôi phục ký tự rớt theo ngữ cảnh toán (patch 1182 đã viết đúng `AH² = BH·CH`), KHÔNG copy nguyên chỗ đứt vào nội dung đề
+
 ### Chrome window bị stale
 - `list_windows` → lấy window_id mới nếu cũ không hoạt động
 - `bring_to_front` để focus window
 
+## Tham khảo (references/)
+Đọc ĐÚNG file khi cần, đừng load tất cả:
+- `exam-list.md` — danh sách đề đầy đủ + trạng thái ✅/⏳ (CẬP NHẬT khi xong mỗi đề)
+- `gemini-panel-methods.md` — 3 cách mở panel Hỏi Gemini (khi Bước 2 kẹt)
+- `chrome-ax-menu-bar.md` — AX tree bị menu bar chiếm (get_window_state toàn AXMenuBar)
+- `extract-script.md` — script parse biên bản từ dump + dấu hiệu element (Bước 3)
+- `paste-methods.md` — thứ tự phương pháp gửi biên bản + snippet trích xuất (Bước 4)
+- `patch-loop-sa-bug.md` — bug sa chỉ apply `e` + luật chọn guard (khi viết/duyệt patch)
+- `pitfalls.md` — pitfall UI tổng hợp (URL bar, session sai, Chrome pid, guest mode…)
+- `session-learnings-*.md` — nhật ký từng phiên; MỚI NHẤT: `20260721-v4` (đề 1183) + `20260721-v3` (đề 1182); file cũ hơn chỉ để tra lịch sử, mâu thuẫn thì file mới thắng
+
 ## Luật bất biến
-- **GUỬI NGUYÊN VĂN, KHÔNG RÚT GỌN DÙ 1 TỪ**
+- **GỬI NGUYÊN VĂN, KHÔNG RÚT GỌN DÙ 1 TỪ**
 - **KHÔNG hỏi user** — tự retry/reset, KHÔNG hỏi "có muốn tiếp tục không"
 - **Reload tab trước mỗi lần chạy Gemini**
 - **Luôn get fresh state trước click**
 - **Tự động poll 15s — không sleep 120s**
 - **Sau Claude Code: verify output khớp biên bản gốc**
+- **press_key(return) vào Claude Code: KHÔNG BAO GIỜ FG**
 - **ĐẠT → chuyển đề kế tiếp, không dừng**
