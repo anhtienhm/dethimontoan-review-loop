@@ -21,8 +21,8 @@ out = []
 capture = False
 
 for l in lines:
-    # Bat dau bien ban
-    if 'BIEN BAN THAM DINH (MA DE: XXXX)' in l and 'AXStaticText' in l:
+    # Bat dau bien ban — marker PHAI CO DAU (text tren UI Gemini co dau tieng Viet)
+    if 'BIÊN BẢN THẨM ĐỊNH (MÃ ĐỀ: XXXX)' in l and 'AXStaticText' in l:
         if not capture:
             capture = True
         else:
@@ -32,8 +32,8 @@ for l in lines:
         if 'AXStaticText = ' in l:
             txt = l.split('AXStaticText = ', 1)[1].rsplit('" [actions', 1)[0].lstrip('"')
             
-            # Stop khi gap dong khong lien quan
-            if 'Ban la To truong' in txt or 'Tham dinh de thi' in txt:
+            # Stop khi gap dong khong lien quan (marker co dau — khop text that tren UI)
+            if 'Bạn là Tổ trưởng' in txt or 'Thẩm định đề thi' in txt:
                 break
             
             out.append(txt)
